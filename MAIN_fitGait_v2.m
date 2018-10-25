@@ -13,9 +13,9 @@
 clearvars;
 clc;
 warning ('off','all');
-cd('C:\Users\florent.moissenet\Documents\Professionnel\publications\articles\1- en cours\Moissenet - Generateur de pattern\Matlab');
-addpath('C:\Users\florent.moissenet\Documents\Professionnel\publications\articles\1- en cours\Moissenet - Generateur de pattern\Matlab');
-addpath('C:\Users\florent.moissenet\Documents\Professionnel\publications\articles\1- en cours\Moissenet - Generateur de pattern\Matlab\Data');
+cd('C:\Users\florent.moissenet\Documents\Professionnel\routines\github\PatternGenerator');
+addpath('C:\Users\florent.moissenet\Documents\Professionnel\routines\github\PatternGenerator');
+addpath('C:\Users\florent.moissenet\Documents\Professionnel\routines\github\PatternGenerator\Data');
 
 % =========================================================================
 % Initialisation
@@ -27,11 +27,12 @@ N = 52; % number of subjects
 C = 30; % maximum cycles per subject (arbitrary value)
 V = 5; % number of walking speed conditions
 T = 101; % number of frames
-J = 1; % selected joint
+J = 2; % selected joint
 minVf = 0.1; % Froude velocity minimum threshold => selected to have an almost constant walk ratio among the data
 maxVf = 0.8; % Froude velocity maximum threshold => selected to have an almost constant walk ratio among the data + Martin et al. 2014
 stepVf = 0.05; % Froude velocity increment
 pReg = 0.01; % level of significance p-value threshold for correlations
+% correlations = {'Constant','Walking speed'};
 correlations = {'Constant','Walking speed','Age','Sex','BMI'};
 
 % Load data merged by walking speed conditions
@@ -41,6 +42,9 @@ File(2) = load('Norm_V2.mat');
 File(3) = load('Norm_V3.mat');
 File(4) = load('Norm_V4.mat');
 File(5) = load('Norm_V5.mat');
+for i = 1:5 % error on the height of one subject (0.8 instead of 1.8 m)
+    File(i).Population.height.data(33) = 1.8;
+end
 
 % =========================================================================
 % Lower limb kinematic data
@@ -155,6 +159,7 @@ clear i;
 
 % Compute the multivariate regression
 % -------------------------------------------------------------------------
+% X = [Sort.walkingSpeed'];
 X = [Sort.walkingSpeed' Sort.age' Sort.sex' Sort.BMI'];
 [Reg.DP,Predictors] = computeRegression(X,Fit.DP,correlations,pReg,0);
 save('Predictors.mat','Predictors');
@@ -230,6 +235,7 @@ for rsubject = 1:N
     
     % Compute the multivariate regression
     % ---------------------------------------------------------------------
+%     X = [Sort.walkingSpeed'];
     X = [Sort.walkingSpeed' Sort.age' Sort.sex' Sort.BMI'];
     [Reg.DP,Predictors] = computeRegression(X,Fit.DP,correlations,pReg,0);
     clear X;
@@ -256,6 +262,7 @@ for rsubject = 1:N
     
     % Apply the multivariate regression
     % ---------------------------------------------------------------------
+%     X = [Sort.walkingSpeed'];
     X = [Sort.walkingSpeed' Sort.age' Sort.sex' Sort.BMI'];
     Reg.DP = applyRegression(X,Predictors);
     clear X;
@@ -290,7 +297,8 @@ end
 % Results of the validation
 % =========================================================================
 load('Population.mat');
-figure;
+close all;
+fig = figure('pos',[10 10 1100 300]);
 
 k = 1;
 % stepVf = 0.01;
@@ -319,31 +327,55 @@ for vf = minVf:stepVf:0.75%maxVf
     end
     subplot(1,3,1);
     hold on;
-    title('RMSE (°)');
+    title('RMSE');
+%     xlabel('Non-dimensionalised walking speed');
+%     ylabel('Ankle DF/PF (°)');
+%     ylabel('Knee Flex/Ext (°)');
+    ylabel('Hip Flex/Ext (°)');
     box on;
+    grid on;
     errorbar(vf,mean(temp2),std(temp2),'kx');
+%     ylim([0 11]); % ankle
+%     ylim([0 14]); % knee
+    ylim([0 10]); % hip
     population_mean = [population_mean Population.RMSE(k).mean];
     population_std = [population_std Population.RMSE(k).std];
     subplot(1,3,2);
     hold on;
     title('R2');
+%     xlabel('Non-dimensionalised walking speed');
+%     ylabel('Ankle DF/PF');
+%     ylabel('Knee Flex/Ext');
+    ylabel('Hip Flex/Ext');
     box on;
+    grid on;
     errorbar(vf,mean(temp3),std(temp3),'kx');
+    plot([0:0.1:0.8],0.3*ones(size([0:0.1:0.8])),'Linestyle','--','Color','black');
+    plot([0:0.1:0.8],0.6*ones(size([0:0.1:0.8])),'Linestyle','--','Color','black');
+    plot([0:0.1:0.8],0.9*ones(size([0:0.1:0.8])),'Linestyle','--','Color','black');
+    ylim([0 1]);
 %     errorbar(vf,Population.R2(k).mean,Population.R2(k).std,'rx');  
 %         population_mean = [population_mean Population.R2(k).mean];
 %         population_std = [population_std Population.R2(k).std];
     subplot(1,3,3);
     hold on;
-    title('VAF (%)');
+    title('VAF');
+%     xlabel('Non-dimensionalised walking speed');
+%     ylabel('Ankle DF/PF (%)');
+%     ylabel('Knee Flex/Ext (%)');
+    ylabel('Hip Flex/Ext (%)');
     box on;
+    grid on;
     errorbar(vf,mean(temp5),std(temp5),'kx');
+    plot([0:0.1:0.8],80*ones(size([0:0.1:0.8])),'Linestyle','--','Color','black');
+    ylim([0 100]);
 %     errorbar(vf,Population.VAF(k).mean,Population.VAF(k).std,'rx');  
 %         population_mean = [population_mean Population.VAF(k).mean];
 %         population_std = [population_std Population.VAF(k).std];
     k = k+1;
 end
 subplot(1,3,1);
-corridor(population_mean',population_std',minVf,stepVf,0.75,'red');  
+corridor(population_mean',population_std',minVf,stepVf,0.75,'black');  
 %%
 % RMSE per subject
 % figure;
@@ -373,7 +405,8 @@ size = 1.64;%input('Subject size (m)? ');
 legLength = 0.8;%input('Subject leg length (m)? ');
 weight = 65;%input('Subject weight (kg)? ');
 BMI = weight/size^2;
-X = [walkingSpeed age sex BMI];
+X = [walkingSpeed];
+% X = [walkingSpeed age sex BMI];
 Test.DP = applyRegression(X,Predictors);
 Reg.kinematics = quinticSpline(Test.DP,1);
 %%
@@ -421,178 +454,564 @@ set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
 plot(Reg.kinematics(:,1:50:size(Reg.kinematics,2)));
 xlim([0 101]);
 % ylim([-20 20]);
-%%
+
+
+%% HIP / Predictors' contribution
+close all;
+clearvars -except File minVf maxVf stepVf;
+load('Population.mat');
+load('Sort.mat');
+load('Regression.mat');
+load('Fitting.mat');
+load('Predictors.mat');
+fig = figure('pos',[10 10 1450 300]);
+fig.PaperSize = [20 5];
+
 % Walking speed
-figure;
 clear kin Test X
 j = 1;
 for i = minVf:stepVf:maxVf 
     walkingSpeed = i;
-    stepLength = mean(Sort.stepLength);
-    cadence = mean(Sort.cadence);
-    wr = stepLength/cadence;
-    age = mean(Sort.age);
-    sex = 0;
-    BMI = mean(Sort.BMI);
-    legLength = mean(Sort.LL);
+    age = median(Sort.age);
+    sex = median(Sort.sex);
+    BMI = median(Sort.BMI);
     X = [walkingSpeed age sex BMI];
-    Test.DP = applyRegression(X,Predictors);
-    kin(:,j) = quinticSpline(Test.DP,0);
+    Test(j).DP = applyRegression(X,Predictors);
+    kin(:,j) = quinticSpline(Test(j).DP,0);
     j = j+1;
 end
-% subplot(1,9,3);
-title('Walking speed');
+h1 = subplot(1,4,1);
+set(h1,'Position',[0.1295,0.35,0.1575,0.6]);
+ylabel('Hip Flex(+)/Ext (°)');
+set(get(h1,'xlabel'),'Position',[52 -25 0]);
 D = colormap(jet(size(kin,2)));
 set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
-plot(kin);
-xlim([0 101]);
-% ylim([-20 20]);
-
-% Step length
-clear kin Test X
-j = 1;
-for i = min(Sort.stepLength):(max(Sort.stepLength)-min(Sort.stepLength))/10:max(Sort.stepLength)
-    walkingSpeed = mean(Sort.walkingSpeed);
-    stepLength = i;
-    cadence = mean(Sort.cadence);
-    wr = stepLength/cadence;
-    age = mean(Sort.age);
-    sex = 0;
-    BMI = mean(Sort.BMI);
-    legLength = mean(Sort.LL);
-    X = [walkingSpeed stepLength cadence wr age sex BMI];
-    Test.DP = applyRegression(X,Predictors);
-    kin(:,j) = quinticSpline(Test.DP,0);
-    j = j+1;
+plot(median(kin,2),'Linestyle','--','Color','black');
+hold on;
+x = [1:1:101 101:-1:1]';
+pMax = max(kin,[],2);
+pMin = min(kin,[],2);
+y = [pMax;pMin(end:-1:1)];
+A = fill(x,y,'black','LineStyle','none','Facealpha',0.3);
+for i = 1:size(kin,2)
+    for j = 1:size(Test(1,1).DP,1) % number of key points
+        plot(Test(1,i).DP(j,1),Test(1,i).DP(j,2),'Marker','.','color',D(i,:),'Markersize',15);
+    end
 end
-subplot(1,9,4);
-title('Step length');
-D = colormap(jet(size(kin,2)));
-set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
-plot(kin);
-xlim([0 101]);
-ylim([-20 20]);
-
-% Cadence
-clear kin Test X
-j = 1;
-for i = min(Sort.cadence):(max(Sort.cadence)-min(Sort.cadence))/10:max(Sort.cadence)
-    walkingSpeed = mean(Sort.walkingSpeed);
-    stepLength = mean(Sort.stepLength);
-    cadence = i;
-    wr = stepLength/cadence;
-    age = mean(Sort.age);
-    sex = 0;
-    BMI = mean(Sort.BMI);
-    legLength = mean(Sort.LL);
-    X = [walkingSpeed stepLength cadence wr age sex BMI];
-    Test.DP = applyRegression(X,Predictors);
-    kin(:,j) = quinticSpline(Test.DP,0);
-    j = j+1;
+% Amplitude of key point angular value
+disp('Walking speed')
+for i = 1:size(Test(1,1).DP,1)
+    temp = [];
+    for j = 1:size(kin,2)
+        temp = [temp Test(1,j).DP(i,2)]; 
+    end
+    max(temp)-min(temp)
 end
-subplot(1,9,5);
-title('Cadence');
-D = colormap(jet(size(kin,2)));
-set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
-plot(kin);
 xlim([0 101]);
-ylim([-20 20]);
-
-% Walk ratio
-clear kin Test X
-j = 1;
-for i = min(Sort.stepLength)/min(Sort.cadence):(max(Sort.stepLength)/max(Sort.cadence)-min(Sort.stepLength)/min(Sort.cadence))/10:max(Sort.stepLength)/max(Sort.cadence)
-    walkingSpeed = mean(Sort.walkingSpeed);
-    stepLength = mean(Sort.stepLength);
-    cadence = mean(Sort.cadence);
-    wr = i;
-    age = mean(Sort.age);
-    sex = 0;
-    BMI = mean(Sort.BMI);
-    legLength = mean(Sort.LL);
-    X = [walkingSpeed stepLength cadence wr age sex BMI];
-    Test.DP = applyRegression(X,Predictors);
-    kin(:,j) = quinticSpline(Test.DP,0);
-    j = j+1;
-end
-subplot(1,9,6);
-title('Walk ratio');
-D = colormap(jet(size(kin,2)));
-set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
-plot(kin);
-xlim([0 101]);
-ylim([-20 20]);
+ylim([-25 35]);
 
 % Age
 clear kin Test X
 j = 1;
-for i = min(Sort.age):(max(Sort.age)-min(Sort.age))/10:max(Sort.age)
-    walkingSpeed = mean(Sort.walkingSpeed);
-    stepLength = mean(Sort.stepLength);
-    cadence = mean(Sort.cadence);
-    wr = stepLength/cadence;
+for i = min(Sort.age):4:65%max(Sort.age) 
+    walkingSpeed = median(Sort.walkingSpeed);
     age = i;
-    sex = 0;
-    BMI = mean(Sort.BMI);
-    legLength = mean(Sort.LL);
-    X = [walkingSpeed stepLength cadence wr age sex BMI];
-    Test.DP = applyRegression(X,Predictors);
-    kin(:,j) = quinticSpline(Test.DP,0);
+    sex = median(Sort.sex);
+    BMI = median(Sort.BMI);
+    X = [walkingSpeed age sex BMI];
+    Test(j).DP = applyRegression(X,Predictors);
+    kin(:,j) = quinticSpline(Test(j).DP,0);
     j = j+1;
 end
-subplot(1,9,7);
-title('Age');
+h2 = subplot(1,4,2);
+set(h2,'Position',[0.33,0.35,0.1575,0.6]);
+set(get(h2,'xlabel'),'Position',[52 -25 0]);
 D = colormap(jet(size(kin,2)));
 set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
-plot(kin);
-xlim([0 101]);
-ylim([-20 20]);
-
-% BMI
-clear kin Test X
-j = 1;
-for i = min(Sort.BMI):(max(Sort.BMI)-min(Sort.BMI))/10:max(Sort.BMI)
-    walkingSpeed = mean(Sort.walkingSpeed);
-    stepLength = mean(Sort.stepLength);
-    cadence = mean(Sort.cadence);
-    wr = stepLength/cadence;
-    age = mean(Sort.age);
-    sex = 0;
-    BMI = i;
-    legLength = mean(Sort.LL);
-    X = [walkingSpeed stepLength cadence wr age sex BMI];
-    Test.DP = applyRegression(X,Predictors);
-    kin(:,j) = quinticSpline(Test.DP,0);
-    j = j+1;
+plot(median(kin,2),'Linestyle','--','Color','black');
+hold on;
+x = [1:1:101 101:-1:1]';
+pMax = max(kin,[],2);
+pMin = min(kin,[],2);
+y = [pMax;pMin(end:-1:1)];
+A = fill(x,y,'black','LineStyle','none','Facealpha',0.3);
+for i = 1:size(kin,2)
+    for j = 1:size(Test(1,1).DP,1) % number of key points
+        plot(Test(1,i).DP(j,1),Test(1,i).DP(j,2),'Marker','.','color',D(i,:),'Markersize',15);
+    end
 end
-subplot(1,9,8);
-title('BMI');
-D = colormap(jet(size(kin,2)));
-set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
-plot(kin);
+% Amplitude of key point angular value
+disp('Age')
+for i = 1:size(Test(1,1).DP,1)
+    temp = [];
+    for j = 1:size(kin,2)
+        temp = [temp Test(1,j).DP(i,2)]; 
+    end
+    max(temp)-min(temp)
+end
 xlim([0 101]);
-ylim([-20 20]);
+ylim([-25 35]);
 
 % Sex
 clear kin Test X
 j = 1;
-for i = 0:1:1
-    walkingSpeed = mean(Sort.walkingSpeed);
-    stepLength = mean(Sort.stepLength);
-    cadence = mean(Sort.cadence);
-    age = mean(Sort.age);
+for i = [0 1]
+    walkingSpeed = median(Sort.walkingSpeed);
+    age = median(Sort.age);
     sex = i;
-    BMI = mean(Sort.BMI);
-    legLength = mean(Sort.LL);
-    X = [walkingSpeed stepLength cadence wr age sex BMI];
-    Test.DP = applyRegression(X,Predictors);
-    kin(:,j) = quinticSpline(Test.DP,0);
+    BMI = median(Sort.BMI);
+    X = [walkingSpeed age sex BMI];
+    Test(j).DP = applyRegression(X,Predictors);
+    kin(:,j) = quinticSpline(Test(j).DP,0);
     j = j+1;
 end
-subplot(1,9,9);
-title('Sex');
+h3 = subplot(1,4,3);
+set(h3,'Position',[0.53,0.35,0.1575,0.6]);
+set(get(h3,'xlabel'),'Position',[52 -25 0]);
 D = colormap(jet(size(kin,2)));
 set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
-plot(kin);
+plot(median(kin,2),'Linestyle','--','Color','black');
+hold on;
+x = [1:1:101 101:-1:1]';
+pMax = max(kin,[],2);
+pMin = min(kin,[],2);
+y = [pMax;pMin(end:-1:1)];
+A = fill(x,y,'black','LineStyle','none','Facealpha',0.3);
+for i = 1:size(kin,2)
+    for j = 1:size(Test(1,1).DP,1) % number of key points
+        plot(Test(1,i).DP(j,1),Test(1,i).DP(j,2),'Marker','.','color',D(i,:),'Markersize',15);
+    end
+end
+% Amplitude of key point angular value
+disp('Sex')
+for i = 1:size(Test(1,1).DP,1)
+    temp = [];
+    for j = 1:size(kin,2)
+        temp = [temp Test(1,j).DP(i,2)]; 
+    end
+    max(temp)-min(temp)
+end
+xlim([0 101]);
+ylim([-25 35]);
+
+% BMI
+clear kin Test X
+j = 1;
+for i = 17:1:31 
+    walkingSpeed = median(Sort.walkingSpeed);
+    age = median(Sort.age);
+    sex = median(Sort.sex);
+    BMI = i;
+    X = [walkingSpeed age sex BMI];
+    Test(j).DP = applyRegression(X,Predictors);
+    kin(:,j) = quinticSpline(Test(j).DP,0);
+    j = j+1;
+end
+h4 = subplot(1,4,4);
+set(h4,'Position',[0.73,0.35,0.1575,0.6]);
+set(get(h4,'xlabel'),'Position',[52 -25 0]);
+D = colormap(jet(size(kin,2)));
+set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
+plot(median(kin,2),'Linestyle','--','Color','black');
+hold on;
+x = [1:1:101 101:-1:1]';
+pMax = max(kin,[],2);
+pMin = min(kin,[],2);
+y = [pMax;pMin(end:-1:1)];
+A = fill(x,y,'black','LineStyle','none','Facealpha',0.3);
+for i = 1:size(kin,2)
+    for j = 1:size(Test(1,1).DP,1) % number of key points
+        plot(Test(1,i).DP(j,1),Test(1,i).DP(j,2),'Marker','.','color',D(i,:),'Markersize',15);
+    end
+end
+% Amplitude of key point angular value
+disp('BMI')
+for i = 1:size(Test(1,1).DP,1)
+    temp = [];
+    for j = 1:size(kin,2)
+        temp = [temp Test(1,j).DP(i,2)]; 
+    end
+    max(temp)-min(temp)
+end
+xlim([0 101]);
+ylim([-25 35]);
+
+%% KNEE / Predictors' contribution
+close all;
+clearvars -except File minVf maxVf stepVf;
+load('Population.mat');
+load('Sort.mat');
+load('Regression.mat');
+load('Fitting.mat');
+load('Predictors.mat');
+fig = figure('pos',[10 10 1450 300]);
+fig.PaperSize = [20 5];
+
+% Walking speed
+clear kin Test X
+j = 1;
+for i = minVf:stepVf:maxVf 
+    walkingSpeed = i;
+    age = median(Sort.age);
+    sex = median(Sort.sex);
+    BMI = median(Sort.BMI);
+    X = [walkingSpeed age sex BMI];
+    Test(j).DP = applyRegression(X,Predictors);
+    kin(:,j) = quinticSpline(Test(j).DP,0);
+    j = j+1;
+end
+h1 = subplot(1,4,1);
+set(h1,'Position',[0.1295,0.35,0.1575,0.6]);
+ylabel('Knee Flex(+)/Ext (°)');
+set(get(h1,'xlabel'),'Position',[52 -25 0]);
+D = colormap(jet(size(kin,2)));
+set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
+plot(median(kin,2),'Linestyle','--','Color','black');
+hold on;
+x = [1:1:101 101:-1:1]';
+pMax = max(kin,[],2);
+pMin = min(kin,[],2);
+y = [pMax;pMin(end:-1:1)];
+A = fill(x,y,'black','LineStyle','none','Facealpha',0.3);
+for i = 1:size(kin,2)
+    for j = 1:size(Test(1,1).DP,1) % number of key points
+        plot(Test(1,i).DP(j,1),Test(1,i).DP(j,2),'Marker','.','color',D(i,:),'Markersize',15);
+    end
+end
+% Amplitude of key point angular value
+disp('Walking speed')
+for i = 1:size(Test(1,1).DP,1)
+    temp = [];
+    for j = 1:size(kin,2)
+        temp = [temp Test(1,j).DP(i,2)]; 
+    end
+    max(temp)-min(temp)
+end
+xlim([0 101]);
+ylim([-5 70]);
+
+% Age
+clear kin Test X
+j = 1;
+for i = 20:4:65%min(Sort.age):4:max(Sort.age) 
+    walkingSpeed = median(Sort.walkingSpeed);
+    age = i;
+    sex = median(Sort.sex);
+    BMI = median(Sort.BMI);
+    X = [walkingSpeed age sex BMI];
+    Test(j).DP = applyRegression(X,Predictors);
+    kin(:,j) = quinticSpline(Test(j).DP,0);
+    j = j+1;
+end
+h2 = subplot(1,4,2);
+set(h2,'Position',[0.33,0.35,0.1575,0.6]);
+set(get(h2,'xlabel'),'Position',[52 -25 0]);
+D = colormap(jet(size(kin,2)));
+set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
+plot(median(kin,2),'Linestyle','--','Color','black');
+hold on;
+x = [1:1:101 101:-1:1]';
+pMax = max(kin,[],2);
+pMin = min(kin,[],2);
+y = [pMax;pMin(end:-1:1)];
+A = fill(x,y,'black','LineStyle','none','Facealpha',0.3);
+for i = 1:size(kin,2)
+    for j = 1:size(Test(1,1).DP,1) % number of key points
+        plot(Test(1,i).DP(j,1),Test(1,i).DP(j,2),'Marker','.','color',D(i,:),'Markersize',15);
+    end
+end
+% Amplitude of key point angular value
+disp('Age')
+for i = 1:size(Test(1,1).DP,1)
+    temp = [];
+    for j = 1:size(kin,2)
+        temp = [temp Test(1,j).DP(i,2)]; 
+    end
+    max(temp)-min(temp)
+end
+xlim([0 101]);
+ylim([-5 70]);
+
+% Sex
+clear kin Test X
+j = 1;
+for i = [0 1]
+    walkingSpeed = median(Sort.walkingSpeed);
+    age = median(Sort.age);
+    sex = i;
+    BMI = median(Sort.BMI);
+    X = [walkingSpeed age sex BMI];
+    Test(j).DP = applyRegression(X,Predictors);
+    kin(:,j) = quinticSpline(Test(j).DP,0);
+    j = j+1;
+end
+h3 = subplot(1,4,3);
+set(h3,'Position',[0.53,0.35,0.1575,0.6]);
+set(get(h3,'xlabel'),'Position',[52 -25 0]);
+D = colormap(jet(size(kin,2)));
+set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
+plot(median(kin,2),'Linestyle','--','Color','black');
+hold on;
+x = [1:1:101 101:-1:1]';
+pMax = max(kin,[],2);
+pMin = min(kin,[],2);
+y = [pMax;pMin(end:-1:1)];
+A = fill(x,y,'black','LineStyle','none','Facealpha',0.3);
+for i = 1:size(kin,2)
+    for j = 1:size(Test(1,1).DP,1) % number of key points
+        plot(Test(1,i).DP(j,1),Test(1,i).DP(j,2),'Marker','.','color',D(i,:),'Markersize',15);
+    end
+end
+% Amplitude of key point angular value
+disp('Sex')
+for i = 1:size(Test(1,1).DP,1)
+    temp = [];
+    for j = 1:size(kin,2)
+        temp = [temp Test(1,j).DP(i,2)]; 
+    end
+    max(temp)-min(temp)
+end
+xlim([0 101]);
+ylim([-5 70]);
+
+% BMI
+clear kin Test X
+j = 1;
+for i = 17:1:31 
+    walkingSpeed = median(Sort.walkingSpeed);
+    age = median(Sort.age);
+    sex = median(Sort.sex);
+    BMI = i;
+    X = [walkingSpeed age sex BMI];
+    Test(j).DP = applyRegression(X,Predictors);
+    kin(:,j) = quinticSpline(Test(j).DP,0);
+    j = j+1;
+end
+h4 = subplot(1,4,4);
+set(h4,'Position',[0.73,0.35,0.1575,0.6]);
+set(get(h4,'xlabel'),'Position',[52 -25 0]);
+D = colormap(jet(size(kin,2)));
+set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
+plot(median(kin,2),'Linestyle','--','Color','black');
+hold on;
+x = [1:1:101 101:-1:1]';
+pMax = max(kin,[],2);
+pMin = min(kin,[],2);
+y = [pMax;pMin(end:-1:1)];
+A = fill(x,y,'black','LineStyle','none','Facealpha',0.3);
+for i = 1:size(kin,2)
+    for j = 1:size(Test(1,1).DP,1) % number of key points
+        plot(Test(1,i).DP(j,1),Test(1,i).DP(j,2),'Marker','.','color',D(i,:),'Markersize',15);
+    end
+end
+% Amplitude of key point angular value
+disp('BMI')
+for i = 1:size(Test(1,1).DP,1)
+    temp = [];
+    for j = 1:size(kin,2)
+        temp = [temp Test(1,j).DP(i,2)]; 
+    end
+    max(temp)-min(temp)
+end
+xlim([0 101]);
+ylim([-5 70]);
+
+%% ANKLE / Predictors' contribution
+close all;
+clearvars -except File minVf maxVf stepVf;
+load('Population.mat');
+load('Sort.mat');
+load('Regression.mat');
+load('Fitting.mat');
+load('Predictors.mat');
+fig = figure('pos',[10 10 1450 300]);
+fig.PaperSize = [20 5];
+
+% Walking speed
+clear kin Test X
+j = 1;
+for i = minVf:stepVf:maxVf 
+    walkingSpeed = i;
+    age = median(Sort.age);
+    sex = median(Sort.sex);
+    BMI = median(Sort.BMI);
+    X = [walkingSpeed age sex BMI];
+    Test(j).DP = applyRegression(X,Predictors);
+    kin(:,j) = quinticSpline(Test(j).DP,0);
+    j = j+1;
+end
+h1 = subplot(1,4,1);
+set(h1,'Position',[0.1295,0.35,0.1575,0.6]);
+title('Non-dimensionalised walking speed');
+xlabel('Gait cycle (%)');
+ylabel('Ankle DF(+)/PF (°)');
+set(get(h1,'title'),'Position',[52 -43 0],'FontWeight','Normal');
+set(get(h1,'xlabel'),'Position',[52 -25 0]);
+D = colormap(jet(size(kin,2)));
+set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
+plot(median(kin,2),'Linestyle','--','Color','black');
+hold on;
+x = [1:1:101 101:-1:1]';
+pMax = max(kin,[],2);
+pMin = min(kin,[],2);
+y = [pMax;pMin(end:-1:1)];
+A = fill(x,y,'black','LineStyle','none','Facealpha',0.3);
+for i = 1:size(kin,2)
+    for j = 1:size(Test(1,1).DP,1) % number of key points
+        plot(Test(1,i).DP(j,1),Test(1,i).DP(j,2),'Marker','.','color',D(i,:),'Markersize',15);
+    end
+end
+% Amplitude of key point angular value
+disp('Walking speed')
+for i = 1:size(Test(1,1).DP,1)
+    temp = [];
+    for j = 1:size(kin,2)
+        temp = [temp Test(1,j).DP(i,2)]; 
+    end
+    max(temp)-min(temp)
+end
 xlim([0 101]);
 ylim([-20 20]);
+colorbar('Location','southoutside','Position',[0.1295,0.15,0.1575,0.02],'TickLabels',{'0.10','0.45','0.80'},'TickDirection','in');
+colormap(h1,'jet');
+
+% Age
+clear kin Test X
+j = 1;
+for i = min(Sort.age):4:65%max(Sort.age) 
+    walkingSpeed = median(Sort.walkingSpeed);
+    age = i;
+    sex = median(Sort.sex);
+    BMI = median(Sort.BMI);
+    X = [walkingSpeed age sex BMI];
+    Test(j).DP = applyRegression(X,Predictors);
+    kin(:,j) = quinticSpline(Test(j).DP,0);
+    j = j+1;
+end
+h2 = subplot(1,4,2);
+set(h2,'Position',[0.33,0.35,0.1575,0.6]);
+title('Age (years)');
+xlabel('Gait cycle (%)');
+set(get(h2,'title'),'Position',[52 -43 0],'FontWeight','Normal');
+set(get(h2,'xlabel'),'Position',[52 -25 0]);
+D = colormap(jet(size(kin,2)));
+set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
+plot(median(kin,2),'Linestyle','--','Color','black');
+hold on;
+x = [1:1:101 101:-1:1]';
+pMax = max(kin,[],2);
+pMin = min(kin,[],2);
+y = [pMax;pMin(end:-1:1)];
+A = fill(x,y,'black','LineStyle','none','Facealpha',0.3);
+for i = 1:size(kin,2)
+    for j = 1:size(Test(1,1).DP,1) % number of key points
+        plot(Test(1,i).DP(j,1),Test(1,i).DP(j,2),'Marker','.','color',D(i,:),'Markersize',15);
+    end
+end
+% Amplitude of key point angular value
+disp('Age')
+for i = 1:size(Test(1,1).DP,1)
+    temp = [];
+    for j = 1:size(kin,2)
+        temp = [temp Test(1,j).DP(i,2)]; 
+    end
+    max(temp)-min(temp)
+end
+xlim([0 101]);
+ylim([-20 20]);
+colorbar('Location','southoutside','Position',[0.33,0.15,0.1575,0.02],'TickLabels',{'19','43','67'},'TickDirection','in');
+colormap(h2,'jet');
+
+% Sex
+clear kin Test X
+j = 1;
+for i = [0 1]
+    walkingSpeed = median(Sort.walkingSpeed);
+    age = median(Sort.age);
+    sex = i;
+    BMI = median(Sort.BMI);
+    X = [walkingSpeed age sex BMI];
+    Test(j).DP = applyRegression(X,Predictors);
+    kin(:,j) = quinticSpline(Test(j).DP,0);
+    j = j+1;
+end
+h3 = subplot(1,4,3);
+set(h3,'Position',[0.53,0.35,0.1575,0.6]);
+title('Sex');
+xlabel('Gait cycle (%)');
+set(get(h3,'title'),'Position',[52 -43 0],'FontWeight','Normal');
+set(get(h3,'xlabel'),'Position',[52 -25 0]);
+D = colormap(jet(size(kin,2)));
+set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
+plot(median(kin,2),'Linestyle','--','Color','black');
+hold on;
+x = [1:1:101 101:-1:1]';
+pMax = max(kin,[],2);
+pMin = min(kin,[],2);
+y = [pMax;pMin(end:-1:1)];
+A = fill(x,y,'black','LineStyle','none','Facealpha',0.3);
+for i = 1:size(kin,2)
+    for j = 1:size(Test(1,1).DP,1) % number of key points
+        plot(Test(1,i).DP(j,1),Test(1,i).DP(j,2),'Marker','.','color',D(i,:),'Markersize',15);
+    end
+end
+% Amplitude of key point angular value
+disp('Sex')
+for i = 1:size(Test(1,1).DP,1)
+    temp = [];
+    for j = 1:size(kin,2)
+        temp = [temp Test(1,j).DP(i,2)]; 
+    end
+    max(temp)-min(temp)
+end
+xlim([0 101]);
+ylim([-20 20]);
+colorbar('Location','southoutside','Position',[0.53,0.15,0.1575,0.02],'Limits',[0 1],'Ticks',[0 1],'TickLabels',{'Woman','Man'},'TickDirection','in');
+colormap(h3,[0 0 1; 0 1 1]);
+
+% BMI
+clear kin Test X
+j = 1;
+for i = 17:1:31 
+    walkingSpeed = median(Sort.walkingSpeed);
+    age = median(Sort.age);
+    sex = median(Sort.sex);
+    BMI = i;
+    X = [walkingSpeed age sex BMI];
+    Test(j).DP = applyRegression(X,Predictors);
+    kin(:,j) = quinticSpline(Test(j).DP,0);
+    j = j+1;
+end
+h4 = subplot(1,4,4);
+set(h4,'Position',[0.73,0.35,0.1575,0.6]);
+title('BMI (kg.m-2)');
+xlabel('Gait cycle (%)');
+set(get(h4,'title'),'Position',[52 -43 0],'FontWeight','Normal');
+set(get(h4,'xlabel'),'Position',[52 -25 0]);
+D = colormap(jet(size(kin,2)));
+set(gca, 'ColorOrder',  D, 'NextPlot', 'replacechildren');
+plot(median(kin,2),'Linestyle','--','Color','black');
+hold on;
+x = [1:1:101 101:-1:1]';
+pMax = max(kin,[],2);
+pMin = min(kin,[],2);
+y = [pMax;pMin(end:-1:1)];
+A = fill(x,y,'black','LineStyle','none','Facealpha',0.3);
+for i = 1:size(kin,2)
+    for j = 1:size(Test(1,1).DP,1) % number of key points
+        plot(Test(1,i).DP(j,1),Test(1,i).DP(j,2),'Marker','.','color',D(i,:),'Markersize',15);
+    end
+end
+% Amplitude of key point angular value
+disp('BMI')
+for i = 1:size(Test(1,1).DP,1)
+    temp = [];
+    for j = 1:size(kin,2)
+        temp = [temp Test(1,j).DP(i,2)]; 
+    end
+    max(temp)-min(temp)
+end
+xlim([0 101]);
+ylim([-20 20]);
+colorbar('Location','southoutside','Position',[0.73,0.15,0.1575,0.02],'TickLabels',{'17','24','31'},'TickDirection','in');
+colormap(h4,'jet');

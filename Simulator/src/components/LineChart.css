@@ -1,0 +1,25 @@
+.c3-line-left {
+  stroke-width: 2px !important;
+}
+
+.c3-line-mid {
+  stroke-width: 2px !important;
+}
+
+.c3-line-right {
+  stroke-width: 2px !important;
+}
+
+.c3-line-y0 {
+  shape-rendering: crispEdges;
+}
+
+text.c3-axis-y-label {
+  font-size: 14px;
+}
+
+path.area {
+  fill: lightgreen !important;
+  opacity: 0.4 !important;
+  stroke: none !important;
+}

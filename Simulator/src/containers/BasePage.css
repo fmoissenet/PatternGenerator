@@ -1,0 +1,7 @@
+.radioButtonLeft > div > label {
+  color: #ff5a5a !important;
+}
+
+.radioButtonRight > div > label {
+  color: #0c2476 !important;
+}
