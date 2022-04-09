@@ -13,7 +13,7 @@
     "ignore-styles": "^5.0.1",
     "import-export": "^1.0.1",
     "material-ui": "^0.17.0",
-    "moment": "^2.17.1",
+    "moment": "^2.29.2",
     "morgan": "^1.7.0",
     "node-fetch": "^1.6.3",
     "react": "^15.4.2",
